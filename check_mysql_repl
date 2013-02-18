@@ -1,0 +1,30 @@
+#!/bin/sh
+
+STATE_OK=0
+STATE_WARNING=1
+STATE_CRITICAL=2
+STATE_UNKNOWN=3
+STATE_DEPENDENT=4
+
+MY_USER=$1
+MY_PASS=$2
+
+SL_MASTER=`mysql -u$MY_USER -p$MY_PASS -e 'show slave status\G' | grep 'Master_Host' | awk '{print $2}'`
+SL_IO=`mysql -u$MY_USER -p$MY_PASS -e 'show slave status\G' | grep 'Slave_IO_Running' | awk '{print $2}'`
+SL_SQL=`mysql -u$MY_USER -p$MY_PASS -e 'show slave status\G' | grep 'Slave_SQL_Running' | awk '{print $2}'`
+
+
+if [ $SL_IO != "Yes" ]
+then 
+	echo "CRITICAL - Slave IO: $SL_IO; Slave SQL: $SL_SQL; Master Host: $SL_MASTER"
+	exit $STATE_CRITICAL
+fi
+
+if [ $SL_SQL != "Yes" ]
+then
+        echo "CRITICAL - Slave IO: $SL_IO; Slave SQL: $SL_SQL; Master Host: $SL_MASTER"
+        exit $STATE_CRITICAL
+fi
+
+echo "OK - Slave IO: $SL_IO; Slave SQL: $SL_SQL; Master Host: $SL_MASTER"
+exit $STATE_OK

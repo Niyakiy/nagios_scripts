@@ -1,0 +1,45 @@
+#!/usr/bin/perl -w
+
+#$MAX_CACHE_MEM=`mysql -uroot -paSd1rg2aw5fhd6sK -e \"show variables like '%query_cache_size%'\\G\"|grep \"Val\"|awk '{ print $2;}'`
+#$FREE_CACHE_MEM=`mysql -uroot -paSd1rg2aw5fhd6sK -e \"show status like 'Qcache_free_memory'\\G\"|grep \"Val\"|awk '{ print $2;}'`
+#$LOWMEM_PRUNES=`mysql -uroot -paSd1rg2aw5fhd6sK -e \"show status like 'Qcache_lowmem_prunes'\\G\"|grep \"Val\"|awk '{ print $2;}'`
+#$CACHED_QUERIES=`mysql -uroot -paSd1rg2aw5fhd6sK -e \"show status like 'Qcache_queries_in_cache'\\G\"|grep \"Val\"|awk '{ print $2;}'`
+
+use DBI;
+
+my $dsn = 'DBI:mysql::localhost';
+my $db_user_name = $ARGV[0];
+my $db_password = $ARGV[1];
+my $dbh = DBI->connect($dsn, $db_user_name, $db_password);
+
+my $sth = $dbh->prepare("show status like 'Qcache_queries_in_cache'");
+$sth->execute();
+($_,$CACHED_QUERIES) = $sth->fetchrow_array();
+$sth->finish();
+
+$sth = $dbh->prepare("show status like 'Qcache_lowmem_prunes'");
+$sth->execute();
+($_,$LOWMEM_PRUNES) = $sth->fetchrow_array();
+$sth->finish();
+
+$sth = $dbh->prepare("show status like 'Qcache_free_memory'");
+$sth->execute();
+($_,$FREE_CACHE_MEM) = $sth->fetchrow_array();
+$sth->finish();
+
+$sth = $dbh->prepare("show variables like 'query_cache_size'");
+$sth->execute();
+($_,$MAX_CACHE_MEM) = $sth->fetchrow_array();
+$sth->finish();
+
+printf("OK: MYSQL CACHE: %.3f%% used (Free: %iMb; Max: %iMb); Queries %i; Prunes: %i",
+	($MAX_CACHE_MEM-$FREE_CACHE_MEM)*100/$MAX_CACHE_MEM,
+	$FREE_CACHE_MEM/1048576,
+	$MAX_CACHE_MEM/1048576,
+	$CACHED_QUERIES,
+	$LOWMEM_PRUNES
+);
+
+$dbh->disconnect();
+
+exit 0;

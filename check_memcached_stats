@@ -1,0 +1,46 @@
+#!/usr/bin/perl
+#
+# memcached-tool:
+#   stats/management tool for memcached.
+#
+# Author:
+#   Brad Fitzpatrick <brad@danga.com>
+#
+# License:
+#   public domain.  I give up all rights to this
+#   tool.  modify and copy at will.
+#
+
+use strict;
+use IO::Socket::INET;
+
+my $host = shift;
+my $mode = shift || "display";
+my ($from, $to);
+
+$host .= ":11211" unless $host =~ /:\d+/;
+
+my $sock = IO::Socket::INET->new(PeerAddr => $host,
+                                 Proto    => 'tcp');
+die "Couldn't connect to $host\n" unless $sock;
+
+    my %items;
+
+    print $sock "stats\r\n";
+
+    while (<$sock>) {
+        last if /^END/;
+        chomp;
+        if (/^STAT\s+(\S*)\s+(.*)/) {
+            $items{$1} = $2;
+        }
+    }
+    
+    printf("OK: Mem usage: %.3f%% (Curr: %.2fGb, Max: %.2fGb); Cache hits: %.3f%% ", 
+            $items{"bytes"}/$items{"limit_maxbytes"}*100, 
+            $items{"bytes"}/1073741824,
+            $items{"limit_maxbytes"}/1073741824,
+            $items{"get_hits"}*100/($items{"get_hits"}+$items{"get_misses"})
+    );
+
+exit 0;
